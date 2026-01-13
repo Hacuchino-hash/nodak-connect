@@ -93,12 +93,12 @@ class _TracePathScreenState extends State<TracePathScreen> {
     try {
       _pendingTraceTag = await connector.sendTracePath(pathBytes);
 
-      // Set a timeout for the trace response
-      Future.delayed(const Duration(seconds: 30), () {
+      // Set a timeout for the trace response (60 seconds for multi-hop round-trip)
+      Future.delayed(const Duration(seconds: 60), () {
         if (_isTracing && _pendingTraceTag != null && mounted) {
           setState(() {
             _isTracing = false;
-            _traceError = 'Trace timed out - no response received';
+            _traceError = 'Trace timed out after 60s - no response received. Check if your firmware supports trace (cmd 36).';
             _pendingTraceTag = null;
           });
         }

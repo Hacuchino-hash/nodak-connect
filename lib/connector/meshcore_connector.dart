@@ -1087,8 +1087,14 @@ class MeshCoreConnector extends ChangeNotifier {
       return tag;
     }
 
-    debugPrint('[Trace] Sending trace with ${path.length} hops, tag=$tag');
-    await sendFrame(buildSendTracePathFrame(path, tag: tag, authCode: authCode));
+    final pathHex = path.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
+    debugPrint('[Trace] Sending trace with ${path.length} hops, tag=$tag, path=[$pathHex]');
+
+    final frame = buildSendTracePathFrame(path, tag: tag, authCode: authCode);
+    final frameHex = frame.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
+    debugPrint('[Trace] Frame: $frameHex');
+
+    await sendFrame(frame);
     return tag;
   }
 
@@ -2273,10 +2279,16 @@ class MeshCoreConnector extends ChangeNotifier {
   }
 
   void _handleTraceData(Uint8List frame) {
+    final frameHex = frame.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
+    debugPrint('[Trace] Received raw frame (${frame.length} bytes): $frameHex');
+
     final result = parseTraceDataFrame(frame);
     if (result != null) {
-      debugPrint('[Trace] Received trace data: $result');
+      debugPrint('[Trace] Parsed trace data: $result');
+      debugPrint('[Trace] Tag: ${result.tag}, Hops: ${result.hopCount}, SNRs: ${result.pathSnrs}');
       _traceResultsController.add(result);
+    } else {
+      debugPrint('[Trace] Failed to parse trace data frame');
     }
   }
 
