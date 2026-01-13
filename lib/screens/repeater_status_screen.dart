@@ -263,10 +263,12 @@ class _RepeaterStatusScreenState extends State<RepeaterStatusScreen> {
       final messageBytes = frame.length >= _statusResponseBytes
           ? frame.length
           : _statusResponseBytes;
-      final timeoutMs = connector.calculateTimeout(
+      final baseTimeoutMs = connector.calculateTimeout(
         pathLength: pathLengthValue,
         messageBytes: messageBytes,
       );
+      // Use 3x timeout for round-trip + processing, with 30s minimum
+      final timeoutMs = (baseTimeoutMs * 3).clamp(30000, 120000);
       _statusTimeout?.cancel();
       _statusTimeout = Timer(Duration(milliseconds: timeoutMs), () {
         if (!mounted) return;

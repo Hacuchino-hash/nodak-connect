@@ -46,14 +46,31 @@ class _RepeaterHubScreenState extends State<RepeaterHubScreen> {
     setState(() => _isSendingAdvert = true);
 
     try {
-      await _commandService!.sendCommand(
-        widget.repeater,
-        'advert',
-        retries: 2,
+      // Send the advert command - this is fire-and-forget since the repeater
+      // broadcasts an advert but may not send a text response back
+      final connector = Provider.of<MeshCoreConnector>(context, listen: false);
+      final repeater = connector.contacts.firstWhere(
+        (c) => c.publicKeyHex == widget.repeater.publicKeyHex,
+        orElse: () => widget.repeater,
       );
+
+      // Prepare path and build the CLI command frame
+      await connector.preparePathForContactSend(repeater);
+      final timestampSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final frame = buildSendCliCommandFrame(
+        repeater.publicKey,
+        'advert',
+        attempt: 0,
+        timestampSeconds: timestampSeconds,
+      );
+      await connector.sendFrame(frame);
+
+      // Brief delay to ensure frame is sent
+      await Future.delayed(const Duration(milliseconds: 500));
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Advertisement sent')),
+        const SnackBar(content: Text('Advertisement command sent')),
       );
     } catch (e) {
       if (!mounted) return;

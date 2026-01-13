@@ -14,6 +14,12 @@ class RepeaterCommandService {
 
   static const int maxRetries = 5;
 
+  /// Minimum timeout for repeater commands (30 seconds)
+  static const int minTimeoutMs = 30000;
+
+  /// Multiplier for calculated timeout (3x for round-trip + processing)
+  static const int timeoutMultiplier = 3;
+
   RepeaterCommandService(this._connector);
 
   /// Send a CLI command to a repeater with automatic retries
@@ -70,10 +76,12 @@ class RepeaterCommandService {
       _pendingByPrefix[prefix] = commandId;
       final framedCommand = '$prefix$command';
       final pathLengthValue = selection.useFlood ? -1 : selection.hopCount;
-      final timeoutMs = _connector.calculateTimeout(
+      final baseTimeoutMs = _connector.calculateTimeout(
         pathLength: pathLengthValue,
         messageBytes: framedCommand.length,
       );
+      // Use 3x timeout for round-trip + processing, with 30s minimum
+      final timeoutMs = (baseTimeoutMs * timeoutMultiplier).clamp(minTimeoutMs, 120000);
       final timeoutSeconds = (timeoutMs / 1000).ceil();
       final timestampSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       _connector.trackRepeaterAck(

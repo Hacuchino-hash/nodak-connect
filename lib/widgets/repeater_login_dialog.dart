@@ -90,10 +90,12 @@ class _RepeaterLoginDialogState extends State<RepeaterLoginDialog> {
       final selection = await _connector.preparePathForContactSend(repeater);
       final loginFrame = buildSendLoginFrame(repeater.publicKey, password);
       final pathLengthValue = selection.useFlood ? -1 : selection.hopCount;
-      final timeoutMs = _connector.calculateTimeout(
+      final baseTimeoutMs = _connector.calculateTimeout(
         pathLength: pathLengthValue,
         messageBytes: loginFrame.length,
       );
+      // Use 3x timeout for round-trip + processing, with 30s minimum
+      final timeoutMs = (baseTimeoutMs * 3).clamp(30000, 120000);
       final timeoutSeconds = (timeoutMs / 1000).ceil();
       final timeout = Duration(milliseconds: timeoutMs);
       final selectionLabel =
