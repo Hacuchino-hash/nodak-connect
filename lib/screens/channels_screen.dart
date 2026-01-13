@@ -95,14 +95,6 @@ class _ChannelsScreenState extends State<ChannelsScreen>
                 MaterialPageRoute(builder: (context) => const ToolsScreen()),
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.tune),
-              tooltip: 'Settings',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              ),
-            ),
           ],
         ),
         body: RefreshIndicator(

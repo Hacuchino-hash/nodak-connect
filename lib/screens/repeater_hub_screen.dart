@@ -25,6 +25,7 @@ class RepeaterHubScreen extends StatefulWidget {
 
 class _RepeaterHubScreenState extends State<RepeaterHubScreen> {
   bool _isSendingAdvert = false;
+  bool _isSyncingTime = false;
   RepeaterCommandService? _commandService;
 
   @override
@@ -83,6 +84,54 @@ class _RepeaterHubScreenState extends State<RepeaterHubScreen> {
     } finally {
       if (mounted) {
         setState(() => _isSendingAdvert = false);
+      }
+    }
+  }
+
+  Future<void> _syncTime() async {
+    if (_isSyncingTime) return;
+
+    setState(() => _isSyncingTime = true);
+
+    try {
+      // Get current UTC timestamp
+      final now = DateTime.now().toUtc();
+      final timestamp = now.millisecondsSinceEpoch ~/ 1000;
+
+      // Send time sync command: "time set <unix_timestamp>"
+      final connector = Provider.of<MeshCoreConnector>(context, listen: false);
+      final repeater = connector.contacts.firstWhere(
+        (c) => c.publicKeyHex == widget.repeater.publicKeyHex,
+        orElse: () => widget.repeater,
+      );
+
+      await connector.preparePathForContactSend(repeater);
+      final timestampSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final frame = buildSendCliCommandFrame(
+        repeater.publicKey,
+        'time set $timestamp',
+        attempt: 0,
+        timestampSeconds: timestampSeconds,
+      );
+      await connector.sendFrame(frame);
+
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Time sync sent: ${now.toIso8601String()}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to sync time: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSyncingTime = false);
       }
     }
   }
@@ -163,6 +212,17 @@ class _RepeaterHubScreenState extends State<RepeaterHubScreen> {
                 color: Colors.purple,
                 onTap: _isSendingAdvert ? () {} : _sendAdvert,
                 isLoading: _isSendingAdvert,
+              ),
+              const SizedBox(height: 12),
+              // Time sync button
+              _buildManagementCard(
+                context,
+                icon: Icons.schedule,
+                title: 'Sync Time',
+                subtitle: 'Set repeater clock to current time',
+                color: Colors.teal,
+                onTap: _isSyncingTime ? () {} : _syncTime,
+                isLoading: _isSyncingTime,
               ),
               const SizedBox(height: 12),
               // Status button
