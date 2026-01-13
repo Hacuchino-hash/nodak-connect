@@ -77,6 +77,10 @@ keystore.properties
 *.freezed.dart
 *.mocks.dart
 
+# Build outputs
+*.apk
+*.aab
+
 # IDE
 .vscode/launch.json
 .vscode/settings.json
