@@ -280,7 +280,7 @@ class _TracePathScreenState extends State<TracePathScreen> {
 
         // Current path display
         if (_selectedPath.isNotEmpty) ...[
-          _buildCurrentPathDisplay(context),
+          _buildCurrentPathDisplay(context, connector),
           const SizedBox(height: 16),
         ],
 
@@ -417,7 +417,7 @@ class _TracePathScreenState extends State<TracePathScreen> {
     );
   }
 
-  Widget _buildCurrentPathDisplay(BuildContext context) {
+  Widget _buildCurrentPathDisplay(BuildContext context, MeshCoreConnector connector) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -447,9 +447,9 @@ class _TracePathScreenState extends State<TracePathScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            // Show path as: You → A → B → C → B → A → You
+            // Show path as: NodeName → A → B → C → B → A → NodeName
             Text(
-              _buildPathDescription(),
+              _buildPathDescription(connector),
               style: theme.textTheme.bodySmall?.copyWith(
                 fontFamily: 'monospace',
                 color: colorScheme.onSurfaceVariant,
@@ -471,14 +471,22 @@ class _TracePathScreenState extends State<TracePathScreen> {
     );
   }
 
-  String _buildPathDescription() {
+  String _buildPathDescription(MeshCoreConnector? connector) {
     if (_selectedPath.isEmpty) return 'No path selected';
+
+    // Get the user's node name if available
+    final selfName = connector?.selfName ?? 'Your Node';
 
     final names = _selectedPath.map((c) =>
         c.name.isEmpty ? c.publicKeyHex.substring(0, 4).toUpperCase() : c.name).toList();
 
-    // Show path: You → A → B → C (response comes back automatically)
-    return ['You', ...names].join(' → ');
+    // Show full round-trip path: Node → A → B → C → B → A → Node
+    final outbound = [selfName, ...names];
+    final inbound = names.reversed.skip(1).toList();
+    if (inbound.isNotEmpty) {
+      return [...outbound, ...inbound, selfName].join(' → ');
+    }
+    return [...outbound, selfName].join(' → ');
   }
 
   Widget _buildPathChip(BuildContext context, int index) {
@@ -762,7 +770,7 @@ class _TracePathScreenState extends State<TracePathScreen> {
                   if (_selectedPath.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      _buildPathDescription(),
+                      _buildPathDescription(connector),
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontFamily: 'monospace',
                         fontWeight: FontWeight.w600,

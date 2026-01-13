@@ -41,6 +41,7 @@ class WardriveService extends ChangeNotifier {
   bool _isLoadingCoverage = false;
   Map<String, dynamic>? _telemetryData;
   bool _isLoadingTelemetry = false;
+  DateTime? _lastCoverageSync;
   Timer? _autoSampleTimer;
   Timer? _fillModeTimer;
   int _autoIntervalSeconds = 30;
@@ -78,6 +79,7 @@ class WardriveService extends ChangeNotifier {
   bool get isLoadingCoverage => _isLoadingCoverage;
   bool get isLoadingTelemetry => _isLoadingTelemetry;
   Map<String, dynamic>? get telemetryData => _telemetryData;
+  DateTime? get lastCoverageSync => _lastCoverageSync;
   int get autoIntervalSeconds => _autoIntervalSeconds;
   double get minDistanceMeters => _minDistanceMeters;
   WardrivePingMode get pingMode => _pingMode;
@@ -163,8 +165,8 @@ class WardriveService extends ChangeNotifier {
   }
 
   /// Fetch existing coverage tiles from the API
-  Future<void> fetchGlobalCoverage() async {
-    if (_isLoadingCoverage) return;
+  Future<void> fetchGlobalCoverage({bool force = false}) async {
+    if (_isLoadingCoverage && !force) return;
 
     _isLoadingCoverage = true;
     notifyListeners();
@@ -172,24 +174,35 @@ class WardriveService extends ChangeNotifier {
     try {
       // Get base URL from api endpoint (remove /put-sample)
       final baseUrl = _apiEndpoint.replaceAll('/put-sample', '');
+      final url = '$baseUrl/get-wardrive-coverage';
+      debugPrint('Fetching coverage from: $url');
+
       final response = await http.get(
-        Uri.parse('$baseUrl/get-wardrive-coverage'),
-      ).timeout(const Duration(seconds: 15));
+        Uri.parse(url),
+      ).timeout(const Duration(seconds: 30));
+
+      debugPrint('Coverage response: ${response.statusCode}, body length: ${response.body.length}');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final List<dynamic> tiles = jsonDecode(response.body) ?? [];
+        final decoded = jsonDecode(response.body);
+        final List<dynamic> tiles = decoded is List ? decoded : [];
+        final previousCount = _globalCoveredTiles.length;
         _globalCoveredTiles.clear();
         for (final tile in tiles) {
           if (tile is String && tile.isNotEmpty) {
             _globalCoveredTiles.add(tile);
           }
         }
+        _lastCoverageSync = DateTime.now();
         _lastError = null;
+        debugPrint('Coverage loaded: ${_globalCoveredTiles.length} tiles (was $previousCount)');
       } else {
         _lastError = 'Failed to fetch coverage: HTTP ${response.statusCode}';
+        debugPrint('Coverage fetch failed: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       _lastError = 'Failed to fetch coverage: $e';
+      debugPrint('Coverage fetch error: $e');
     }
 
     _isLoadingCoverage = false;

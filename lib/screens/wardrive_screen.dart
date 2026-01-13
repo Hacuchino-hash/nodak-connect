@@ -48,12 +48,12 @@ class _WardriveScreenState extends State<WardriveScreen>
   void _startMapRefresh() {
     _stopMapRefresh();
     final service = context.read<WardriveService>();
-    // Refresh immediately when switching to map
-    service.fetchGlobalCoverage();
-    // Then refresh every 60 seconds
+    // Refresh immediately when switching to map (force refresh)
+    service.fetchGlobalCoverage(force: true);
+    // Then refresh every 30 seconds for more responsive updates
     _mapRefreshTimer = Timer.periodic(
-      const Duration(seconds: 60),
-      (_) => service.fetchGlobalCoverage(),
+      const Duration(seconds: 30),
+      (_) => service.fetchGlobalCoverage(force: true),
     );
   }
 
@@ -420,10 +420,19 @@ class _WardriveScreenState extends State<WardriveScreen>
                       ),
                     ),
                   const SizedBox(height: 4),
+                  if (service.lastCoverageSync != null)
+                    Text(
+                      'Synced: ${_formatSyncTime(service.lastCoverageSync!)}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 10,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
                   InkWell(
                     onTap: service.isLoadingCoverage
                         ? null
-                        : () => service.fetchGlobalCoverage(),
+                        : () => service.fetchGlobalCoverage(force: true),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -441,7 +450,7 @@ class _WardriveScreenState extends State<WardriveScreen>
                           ),
                         const SizedBox(width: 4),
                         Text(
-                          'Refresh',
+                          service.isLoadingCoverage ? 'Syncing...' : 'Refresh',
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: colorScheme.primary,
                           ),
@@ -463,6 +472,18 @@ class _WardriveScreenState extends State<WardriveScreen>
         ),
       ],
     );
+  }
+
+  String _formatSyncTime(DateTime time) {
+    final now = DateTime.now();
+    final diff = now.difference(time);
+    if (diff.inSeconds < 60) {
+      return '${diff.inSeconds}s ago';
+    } else if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m ago';
+    } else {
+      return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    }
   }
 
   Color _getSampleMarkerColor(WardriveSample sample) {
