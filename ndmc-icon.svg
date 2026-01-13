@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="meshGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#34d399"/>
+    </linearGradient>
+  </defs>
+  <!-- Background with padding for adaptive icons -->
+  <rect width="1024" height="1024" fill="#0a0a0a"/>
+  <!-- Hexagon mesh pattern - centered with 18% safe zone padding -->
+  <g transform="translate(512, 512) scale(0.55)">
+    <!-- Main hexagon outline -->
+    <path d="M0 -448L388 -224V224L0 448L-388 224V-224L0 -448Z" stroke="url(#meshGrad)" stroke-width="40" fill="none"/>
+    <!-- Internal mesh lines -->
+    <path d="M0 -448V448M-388 -224L388 224M388 -224L-388 224" stroke="url(#meshGrad)" stroke-width="30" opacity="0.6"/>
+    <!-- Node circles at vertices -->
+    <circle cx="0" cy="-448" r="50" fill="url(#meshGrad)"/>
+    <circle cx="388" cy="-224" r="50" fill="url(#meshGrad)"/>
+    <circle cx="388" cy="224" r="50" fill="url(#meshGrad)"/>
+    <circle cx="0" cy="448" r="50" fill="url(#meshGrad)"/>
+    <circle cx="-388" cy="224" r="50" fill="url(#meshGrad)"/>
+    <circle cx="-388" cy="-224" r="50" fill="url(#meshGrad)"/>
+    <!-- Center node (larger) -->
+    <circle cx="0" cy="0" r="65" fill="url(#meshGrad)"/>
+  </g>
+</svg>

@@ -1,0 +1,185 @@
+import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart';
+
+class GifMessage extends StatefulWidget {
+  final String url;
+  final Color backgroundColor;
+  final Color fallbackTextColor;
+  final double width;
+  final double height;
+
+  const GifMessage({
+    super.key,
+    required this.url,
+    required this.backgroundColor,
+    required this.fallbackTextColor,
+    this.width = 200,
+    this.height = 140,
+  });
+
+  @override
+  State<GifMessage> createState() => _GifMessageState();
+}
+
+class _GifMessageState extends State<GifMessage> {
+  ImageStream? _imageStream;
+  ImageStreamListener? _listener;
+  ui.Image? _image;
+  Object? _error;
+  bool _isLoading = true;
+  bool _isPaused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveImage();
+  }
+
+  @override
+  void didUpdateWidget(covariant GifMessage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _unsubscribe();
+      _image = null;
+      _error = null;
+      _isLoading = true;
+      _isPaused = false;
+      _resolveImage();
+    }
+  }
+
+  @override
+  void dispose() {
+    _unsubscribe();
+    super.dispose();
+  }
+
+  void _resolveImage() {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    final provider = NetworkImage(widget.url);
+    final stream = provider.resolve(ImageConfiguration.empty);
+    _imageStream = stream;
+    _listener = ImageStreamListener(
+      (imageInfo, _) {
+        if (_isPaused) {
+          return;
+        }
+        setState(() {
+          _image = imageInfo.image;
+          _isLoading = false;
+        });
+      },
+      onError: (error, _) {
+        setState(() {
+          _error = error;
+          _isLoading = false;
+        });
+      },
+    );
+    stream.addListener(_listener!);
+  }
+
+  void _retryLoad() {
+    _unsubscribe();
+    _image = null;
+    _isPaused = false;
+    _resolveImage();
+  }
+
+  void _unsubscribe() {
+    if (_imageStream != null && _listener != null) {
+      _imageStream!.removeListener(_listener!);
+    }
+  }
+
+  void _togglePause() {
+    if (_error != null) {
+      _retryLoad();
+      return;
+    }
+    if (_image == null) {
+      if (!_isLoading) {
+        _retryLoad();
+      }
+      return;
+    }
+    setState(() {
+      _isPaused = !_isPaused;
+    });
+    if (_listener == null || _imageStream == null) {
+      return;
+    }
+    if (_isPaused) {
+      _imageStream!.removeListener(_listener!);
+    } else {
+      _imageStream!.addListener(_listener!);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget content;
+
+    if (_error != null) {
+      content = Center(
+        child: Text(
+          "Can't load GIF\nTap to retry",
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12, color: widget.fallbackTextColor),
+        ),
+      );
+    } else if (_isLoading && _image == null) {
+      content = const Center(
+        child: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    } else if (_image == null) {
+      content = Center(
+        child: Text(
+          'Tap to load GIF',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12, color: widget.fallbackTextColor),
+        ),
+      );
+    } else {
+      content = RawImage(
+        image: _image,
+        fit: BoxFit.cover,
+        width: widget.width,
+        height: widget.height,
+      );
+    }
+
+    return GestureDetector(
+      onTap: _togglePause,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          color: widget.backgroundColor,
+          width: widget.width,
+          height: widget.height,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              content,
+              if (_isPaused && _image != null)
+                Container(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  child: const Center(
+                    child: Icon(Icons.pause, color: Colors.white70, size: 28),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
