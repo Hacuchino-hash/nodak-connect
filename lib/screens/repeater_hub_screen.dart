@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../connector/meshcore_connector.dart';
+import '../connector/meshcore_protocol.dart';
 import '../models/contact.dart';
+import '../services/repeater_command_service.dart';
 import 'repeater_neighbors_screen.dart';
 import 'repeater_status_screen.dart';
 import 'repeater_cli_screen.dart';
 import 'repeater_settings_screen.dart';
 
-class RepeaterHubScreen extends StatelessWidget {
+class RepeaterHubScreen extends StatefulWidget {
   final Contact repeater;
   final String password;
 
@@ -14,6 +18,57 @@ class RepeaterHubScreen extends StatelessWidget {
     required this.repeater,
     required this.password,
   });
+
+  @override
+  State<RepeaterHubScreen> createState() => _RepeaterHubScreenState();
+}
+
+class _RepeaterHubScreenState extends State<RepeaterHubScreen> {
+  bool _isSendingAdvert = false;
+  RepeaterCommandService? _commandService;
+
+  @override
+  void initState() {
+    super.initState();
+    final connector = Provider.of<MeshCoreConnector>(context, listen: false);
+    _commandService = RepeaterCommandService(connector);
+  }
+
+  @override
+  void dispose() {
+    _commandService?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendAdvert() async {
+    if (_isSendingAdvert) return;
+
+    setState(() => _isSendingAdvert = true);
+
+    try {
+      await _commandService!.sendCommand(
+        widget.repeater,
+        'advert',
+        retries: 2,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Advertisement sent')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to send advertisement: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSendingAdvert = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +80,7 @@ class RepeaterHubScreen extends StatelessWidget {
           children: [
             const Text('Repeater Management'),
             Text(
-              repeater.name,
+              widget.repeater.name,
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
             ),
           ],
@@ -50,15 +105,15 @@ class RepeaterHubScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        repeater.name,
+                        widget.repeater.name,
                         style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        repeater.pathLabel,
+                        widget.repeater.pathLabel,
                         style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
-                      if (repeater.hasLocation) ...[
+                      if (widget.repeater.hasLocation) ...[
                         const SizedBox(height: 4),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -66,7 +121,7 @@ class RepeaterHubScreen extends StatelessWidget {
                             Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
                             const SizedBox(width: 4),
                             Text(
-                              '${repeater.latitude?.toStringAsFixed(4)}, ${repeater.longitude?.toStringAsFixed(4)}',
+                              '${widget.repeater.latitude?.toStringAsFixed(4)}, ${widget.repeater.longitude?.toStringAsFixed(4)}',
                               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                             ),
                           ],
@@ -82,6 +137,17 @@ class RepeaterHubScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
+              // Advert button
+              _buildManagementCard(
+                context,
+                icon: Icons.broadcast_on_personal,
+                title: 'Send Advert',
+                subtitle: 'Broadcast presence from this repeater',
+                color: Colors.purple,
+                onTap: _isSendingAdvert ? () {} : _sendAdvert,
+                isLoading: _isSendingAdvert,
+              ),
+              const SizedBox(height: 12),
               // Status button
               _buildManagementCard(
                 context,
@@ -94,8 +160,8 @@ class RepeaterHubScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => RepeaterStatusScreen(
-                        repeater: repeater,
-                        password: password,
+                        repeater: widget.repeater,
+                        password: widget.password,
                       ),
                     ),
                   );
@@ -114,8 +180,8 @@ class RepeaterHubScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => RepeaterNeighborsScreen(
-                        repeater: repeater,
-                        password: password,
+                        repeater: widget.repeater,
+                        password: widget.password,
                       ),
                     ),
                   );
@@ -134,8 +200,8 @@ class RepeaterHubScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => RepeaterCliScreen(
-                        repeater: repeater,
-                        password: password,
+                        repeater: widget.repeater,
+                        password: widget.password,
                       ),
                     ),
                   );
@@ -154,8 +220,8 @@ class RepeaterHubScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => RepeaterSettingsScreen(
-                        repeater: repeater,
-                        password: password,
+                        repeater: widget.repeater,
+                        password: widget.password,
                       ),
                     ),
                   );
@@ -174,11 +240,12 @@ class RepeaterHubScreen extends StatelessWidget {
     required String subtitle,
     required Color color,
     required VoidCallback onTap,
+    bool isLoading = false,
   }) {
     return Card(
       elevation: 2,
       child: InkWell(
-        onTap: onTap,
+        onTap: isLoading ? null : onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -190,7 +257,16 @@ class RepeaterHubScreen extends StatelessWidget {
                   color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: color, size: 32),
+                child: isLoading
+                    ? SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: color,
+                        ),
+                      )
+                    : Icon(icon, color: color, size: 32),
               ),
               const SizedBox(width: 16),
               Expanded(

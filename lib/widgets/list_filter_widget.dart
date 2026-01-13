@@ -11,6 +11,7 @@ enum ContactTypeFilter {
   users,
   repeaters,
   rooms,
+  hideRepeaters,
 }
 
 class SortFilterMenuOption {
@@ -106,8 +107,9 @@ const int _actionFilterAll = 4;
 const int _actionFilterUsers = 5;
 const int _actionFilterRepeaters = 6;
 const int _actionFilterRooms = 7;
-const int _actionToggleUnreadOnly = 8;
-const int _actionNewGroup = 9;
+const int _actionFilterHideRepeaters = 8;
+const int _actionToggleUnreadOnly = 9;
+const int _actionNewGroup = 10;
 
 class ContactsFilterMenu extends StatelessWidget {
   final ContactSortOption sortOption;
@@ -177,6 +179,11 @@ class ContactsFilterMenu extends StatelessWidget {
               checked: typeFilter == ContactTypeFilter.rooms,
             ),
             SortFilterMenuOption(
+              value: _actionFilterHideRepeaters,
+              label: 'Hide repeaters',
+              checked: typeFilter == ContactTypeFilter.hideRepeaters,
+            ),
+            SortFilterMenuOption(
               value: _actionToggleUnreadOnly,
               label: 'Unread only',
               checked: showUnreadOnly,
@@ -210,6 +217,9 @@ class ContactsFilterMenu extends StatelessWidget {
             break;
           case _actionFilterRooms:
             onTypeFilterChanged(ContactTypeFilter.rooms);
+            break;
+          case _actionFilterHideRepeaters:
+            onTypeFilterChanged(ContactTypeFilter.hideRepeaters);
             break;
           case _actionToggleUnreadOnly:
             onUnreadOnlyChanged(!showUnreadOnly);

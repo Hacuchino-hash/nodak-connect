@@ -240,24 +240,6 @@ class AppSettingsScreen extends StatelessWidget {
               );
             },
           ),
-          const Divider(height: 1),
-          SwitchListTile(
-            secondary: const Icon(Icons.cell_tower),
-            title: const Text('Repeater Auto-Login'),
-            subtitle: const Text('Automatically login when password is saved'),
-            value: settingsService.settings.repeaterAutoLogin,
-            onChanged: (value) {
-              settingsService.setRepeaterAutoLogin(value);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(value
-                      ? 'Repeater auto-login enabled'
-                      : 'Repeater auto-login disabled'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-          ),
         ],
       ),
     );

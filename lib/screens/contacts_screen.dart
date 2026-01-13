@@ -341,6 +341,8 @@ class _ContactsScreenState extends State<ContactsScreen>
         return contact.type == advTypeRepeater;
       case ContactTypeFilter.rooms:
         return contact.type == advTypeRoom;
+      case ContactTypeFilter.hideRepeaters:
+        return contact.type != advTypeRepeater;
     }
   }
 

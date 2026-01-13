@@ -21,7 +21,8 @@ BatteryUi batteryUiForPercent(int? percent) {
     <= 30 => const BatteryUi(Icons.battery_1_bar, Colors.orange),
     <= 45 => const BatteryUi(Icons.battery_2_bar, Colors.amber),
     <= 60 => const BatteryUi(Icons.battery_3_bar, Colors.lightGreen),
-    <= 80 => const BatteryUi(Icons.battery_5_bar, Colors.green),
+    <= 75 => const BatteryUi(Icons.battery_4_bar, Colors.green),
+    <= 90 => const BatteryUi(Icons.battery_5_bar, Colors.green),
     _ => const BatteryUi(Icons.battery_full, Colors.green),
   };
 }
